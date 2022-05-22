@@ -1,5 +1,6 @@
 import { createCookieSessionStorage } from "@remix-run/node";
 import invariant from "tiny-invariant";
+import type { User } from "~/models/user.server";
 
 invariant(process.env.SESSION_SECRET, "SESSION_SECRET must be set");
 
@@ -24,5 +25,5 @@ export async function getSession(request: Request) {
 
 export async function getUser(request: Request) {
   const session = await getSession(request);
-  return session.get(USER_SESSION_KEY);
+  return session.get(USER_SESSION_KEY) as User | undefined;
 }

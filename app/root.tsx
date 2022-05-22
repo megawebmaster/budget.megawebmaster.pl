@@ -15,6 +15,7 @@ import {
 
 import tailwindStylesheetUrl from "./styles/tailwind.css";
 import { getUser } from "~/session.server";
+import { getBudgetList } from "~/models/budget.server";
 
 export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: tailwindStylesheetUrl }];
@@ -22,17 +23,22 @@ export const links: LinksFunction = () => {
 
 export const meta: MetaFunction = () => ({
   charset: "utf-8",
-  title: "Remix Notes",
+  title: "SimplyBudget",
   viewport: "width=device-width,initial-scale=1",
 });
 
 type LoaderData = {
   user: Awaited<ReturnType<typeof getUser>>;
+  budgets: Awaited<ReturnType<typeof getBudgetList>>;
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
+  const user = await getUser(request);
+  const budgets = !user ? [] : await getBudgetList({ accountId: user.id });
+
   return json<LoaderData>({
-    user: await getUser(request),
+    user,
+    budgets,
   });
 };
 

@@ -38,11 +38,11 @@ authenticator.use(
 
 export async function getAccount(request: Request) {
   const user = await getUser(request);
-  return await getAccountById(user.id);
+  return !user ? undefined : await getAccountById(user.id);
 }
 
 export async function requireUser(request: Request) {
-  const user = getUser(request);
+  const user = await getUser(request);
   if (user) return user;
 
   throw await authenticator.logout(request, { redirectTo: "/" });

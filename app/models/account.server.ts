@@ -1,3 +1,4 @@
+import type { Account } from "@prisma/client";
 import { prisma } from "~/db.server";
 
 export type { Account } from "@prisma/client";
@@ -7,7 +8,6 @@ export async function getAccount(id: Account["id"]) {
 }
 
 export async function ensureAccountExists(id: Account["id"]) {
-  console.log("account", await getAccount(id));
   if ((await getAccount(id)) === null) {
     await createAccount(id);
   }

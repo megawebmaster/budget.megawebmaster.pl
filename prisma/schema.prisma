@@ -13,17 +13,28 @@ model Account {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  notes Note[]
+  budgets BudgetAccess[]
 }
 
-model Note {
+model Budget {
   id String @id @default(cuid())
-  title String
-  body String
+  name String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  accounts BudgetAccess[]
+}
+
+model BudgetAccess {
+  budget Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  budgetId String
+
   account Account @relation(fields: [accountId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   accountId String
+
+  key String
+  isDefault Boolean
+
+  @@id([budgetId, accountId])
 }
