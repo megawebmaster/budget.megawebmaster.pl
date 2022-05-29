@@ -17,8 +17,9 @@ type LoaderData = {
 
 export const loader: LoaderFunction = async ({ request, params }) => {
   invariant(params.budgetId, "Budget ID is required");
-  await requireUser(request);
+  const user = await requireUser(request);
   const budget = await getBudget({
+    accountId: user.id,
     budgetId: params.budgetId,
   });
   if (!budget) {

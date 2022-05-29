@@ -1,10 +1,13 @@
 import type { ActionFunction, MetaFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Form, useActionData } from "@remix-run/react";
-import * as React from "react";
+import { useActionData, useSubmit } from "@remix-run/react";
+import type { FormEvent } from "react";
+import { useEffect, useRef } from "react";
+import invariant from "tiny-invariant";
 
 import { requireUser } from "~/auth.server";
 import { createBudget } from "~/models/budget.server";
+import { useEncryptionKeys } from "~/hooks/use-encryption-keys";
 
 export const meta: MetaFunction = () => ({
   title: "New budget - SimplyBudget",
@@ -22,7 +25,8 @@ export const action: ActionFunction = async ({ request }) => {
 
   const formData = await request.formData();
   const name = formData.get("name");
-  const encryptionPassword = formData.get("password");
+  const key = formData.get("key");
+  const salt = formData.get("salt");
   const isDefault = formData.get("is-default");
 
   if (typeof name !== "string" || name.length === 0) {
@@ -33,31 +37,23 @@ export const action: ActionFunction = async ({ request }) => {
   }
 
   if (
-    typeof encryptionPassword !== "string" ||
-    encryptionPassword.length === 0
+    typeof key !== "string" ||
+    key.length === 0 ||
+    typeof salt !== "string" ||
+    salt.length === 0
   ) {
     return json<ActionData>(
-      { errors: { password: "Encryption password is required" } },
-      { status: 400 }
-    );
-  }
-  if (encryptionPassword.length < 12) {
-    return json<ActionData>(
-      {
-        errors: {
-          password: "Encryption password must be at least 12 characters long",
-        },
-      },
+      { errors: { password: "A password is required for encryption." } },
       { status: 400 }
     );
   }
 
-  // TODO: Generate key for encryption based on password
   const budget = await createBudget({
     accountId: user.id,
     isDefault: isDefault === "yes",
     name,
-    key: encryptionPassword,
+    key,
+    salt,
   });
 
   return redirect(`/budget/${budget.budgetId}`);
@@ -65,11 +61,25 @@ export const action: ActionFunction = async ({ request }) => {
 
 // TODO: Style new budget page
 export default function NewBudgetPage() {
+  const { generateKey } = useEncryptionKeys();
   const actionData = useActionData() as ActionData;
-  const nameRef = React.useRef<HTMLInputElement>(null);
-  const passwordRef = React.useRef<HTMLInputElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
-  React.useEffect(() => {
+  const submit = useSubmit();
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    const data = new FormData(event.currentTarget);
+    const password = data.get("password") as string;
+    invariant(password, "Password is required");
+
+    const { key, salt } = await generateKey(password);
+    data.set("key", key);
+    data.set("salt", salt);
+    // TODO: Encrypt budget's name
+    submit(data);
+  };
+
+  useEffect(() => {
     if (actionData?.errors?.name) {
       nameRef.current?.focus();
     } else if (actionData?.errors?.password) {
@@ -78,7 +88,7 @@ export default function NewBudgetPage() {
   }, [actionData]);
 
   return (
-    <Form method="post">
+    <form method="post" onSubmit={handleSubmit}>
       <div>
         <h2 className="mb-4 text-3xl">Create new budget</h2>
         <label className="flex w-full flex-col gap-1">
@@ -128,6 +138,6 @@ export default function NewBudgetPage() {
           Create
         </button>
       </div>
-    </Form>
+    </form>
   );
 }

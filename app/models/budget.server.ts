@@ -1,8 +1,17 @@
-import type { Budget, BudgetAccess } from "@prisma/client";
+import type { Budget as DBBudget, BudgetAccess } from "@prisma/client";
 import type { Account } from "~/models/account.server";
 import { prisma } from "~/db.server";
+import invariant from "tiny-invariant";
 
-export type { Budget, BudgetAccess } from "@prisma/client";
+export type { BudgetAccess } from "@prisma/client";
+
+export type Budget = {
+  id: DBBudget["id"];
+  name: DBBudget["name"];
+  key: BudgetAccess["key"];
+  salt: BudgetAccess["salt"];
+  isDefault: BudgetAccess["isDefault"];
+};
 
 export function getBudgetList({
   accountId,
@@ -34,10 +43,32 @@ export function getDefaultBudget({
   });
 }
 
-export async function getBudget({ budgetId }: { budgetId: Budget["id"] }) {
-  return prisma.budget.findUnique({
+export async function getBudget({
+  accountId,
+  budgetId,
+}: {
+  accountId: BudgetAccess["accountId"];
+  budgetId: BudgetAccess["budgetId"];
+}): Promise<Budget> {
+  const budget = await prisma.budget.findUnique({
     where: { id: budgetId },
   });
+
+  invariant(budget, "Budget not found!");
+
+  const access = await prisma.budgetAccess.findFirst({
+    where: { accountId, budgetId },
+  });
+
+  invariant(access, "This user has no right to access the budget!");
+
+  return {
+    id: budget.id,
+    name: budget.name,
+    key: access.key,
+    salt: access.salt,
+    isDefault: access.isDefault,
+  };
 }
 
 export async function createBudget({
@@ -45,19 +76,19 @@ export async function createBudget({
   isDefault,
   key,
   name,
-}: Pick<Budget, "name"> &
-  Pick<BudgetAccess, "isDefault"> & {
-    accountId: Account["id"];
-    key: BudgetAccess["key"];
-  }) {
+  salt,
+}: Omit<Budget, "id"> & {
+  accountId: Account["id"];
+}) {
   const budget = await prisma.budget.create({
     data: { name },
   });
 
   return await prisma.budgetAccess.create({
     data: {
-      key,
       isDefault,
+      key,
+      salt,
       account: {
         connect: {
           id: accountId,

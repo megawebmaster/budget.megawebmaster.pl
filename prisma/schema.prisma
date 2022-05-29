@@ -34,6 +34,7 @@ model BudgetAccess {
   accountId String
 
   key String
+  salt String
   isDefault Boolean
 
   @@id([budgetId, accountId])

@@ -22,6 +22,7 @@ CREATE TABLE "BudgetAccess" (
     "budgetId" TEXT NOT NULL,
     "accountId" TEXT NOT NULL,
     "key" TEXT NOT NULL,
+    "salt" TEXT NOT NULL,
     "isDefault" BOOLEAN NOT NULL,
 
     PRIMARY KEY ("budgetId", "accountId"),
