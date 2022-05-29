@@ -16,4 +16,12 @@ module.exports = {
       version: 27,
     },
   },
+  rules: {
+    "react-hooks/exhaustive-deps": [
+      "error",
+      {
+        additionalHooks: "(useAsync|useAsyncCallback)",
+      },
+    ],
+  },
 };
